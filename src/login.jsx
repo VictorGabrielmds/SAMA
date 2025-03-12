@@ -22,7 +22,7 @@ function Login({ onLogin = () => {} }) {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email+"@gmail.com", password);
       onLogin(userCredential.user);
       navigate("/");
     } catch (err) {
@@ -38,8 +38,8 @@ function Login({ onLogin = () => {} }) {
       <h2>Login</h2>
       <form onSubmit={handleLogin}>
         <input
-          type="email"
-          placeholder="E-mail"
+          type="text"
+          placeholder="Nome"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required

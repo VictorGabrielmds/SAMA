@@ -3,20 +3,33 @@ import { getFirestore, collection, onSnapshot, doc, updateDoc } from "firebase/f
 import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 
+// Importe o arquivo de áudio (coloque o arquivo na pasta public/sounds)
+import alertSound from "../public/sounds/monitor-alerta.mp3"; // Ajuste o caminho conforme necessário
+
 function MonitorDashboard() {
   const [turmas, setTurmas] = useState([]);
   const db = getFirestore();
+  const [alertedTurmas, setAlertedTurmas] = useState(new Set()); // Controla turmas que já alertaram
+
+  // Configura o áudio
+  const audio = new Audio(alertSound);
 
   useEffect(() => {
     console.log("📡 Iniciando snapshot de turmas...");
-
-    if (!db) return;
 
     const unsubscribe = onSnapshot(collection(db, "turmas"), (snapshot) => {
       const turmasAtivas = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
+
+      // Toca o som para novas solicitações de ajuda
+      turmasAtivas.forEach((turma) => {
+        if (turma.precisaAjuda && !turma.monitorIndo && !alertedTurmas.has(turma.id)) {
+          audio.play();
+          setAlertedTurmas((prev) => new Set([...prev, turma.id]));
+        }
+      });
 
       console.log("📊 Atualizando turmas:", turmasAtivas);
       setTurmas(turmasAtivas);
@@ -26,11 +39,18 @@ function MonitorDashboard() {
       console.log("🛑 Desinscrevendo snapshot de turmas...");
       unsubscribe();
     };
-  }, [db]);
+  }, [db, alertedTurmas]);
 
   const responderAjuda = async (turmaId) => {
     await updateDoc(doc(db, "turmas", turmaId), {
-      monitorIndo: true, // Apenas define monitorIndo como true
+      monitorIndo: true,
+    });
+    
+    // Remove a turma da lista de alertas
+    setAlertedTurmas((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(turmaId);
+      return newSet;
     });
   };
 

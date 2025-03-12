@@ -1,27 +1,26 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getFirestore, doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { auth } from "./firebase"; // Importe signOut corretamente
+import { useParams, useNavigate } from "react-router-dom";
+import { getFirestore, doc, onSnapshot, updateDoc, getDoc } from "firebase/firestore";
+import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 
 function ProfessorDashboard() {
-  const { turmaId } = useParams(); // Acessa o turmaId da URL
+  const { turmaId } = useParams();
   const [turma, setTurma] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState(""); // Estado para controlar o status
+  const [status, setStatus] = useState("");
   const db = getFirestore();
+  const navigate = useNavigate();
 
   // Efeitos sonoros
-  const somPedirAjuda = new Audio("/sounds/pedir-ajuda.mp3"); // Caminho para o arquivo de áudio
-  const somMonitorCaminho = new Audio("/sounds/monitor-caminho.mp3"); // Caminho para o arquivo de áudio
+  const somPedirAjuda = new Audio("/sounds/pedir-ajuda.mp3");
+  const somMonitorCaminho = new Audio("/sounds/monitor-caminho.mp3");
 
-  // Função para extrair o nome do e-mail (ex: "nome@gmail.com" → "nome")
   const getNomeFromEmail = (email) => {
-    return email.split("@")[0]; // Pega a parte antes do "@"
+    return email.split("@")[0];
   };
 
-  // Atualiza o campo `professor` no Firestore com o nome do professor
   const atualizarNomeProfessor = async (email) => {
     const nome = getNomeFromEmail(email);
     try {
@@ -33,43 +32,48 @@ function ProfessorDashboard() {
     }
   };
 
-  // Observa as mudanças na turma no Firestore em tempo real
   useEffect(() => {
-    const turmaRef = doc(db, "turmas", turmaId);
-
-    // Listener para atualizações em tempo real
-    const unsubscribe = onSnapshot(turmaRef, (turmaSnap) => {
-      if (turmaSnap.exists()) {
-        const data = turmaSnap.data();
-        setTurma(data);
-        setLoading(false);
-
-        // Lógica para atualizar o status e tocar sons
-        if (data.precisaAjuda && !data.monitorIndo) {
-          setStatus("Monitor acionado");
-          somPedirAjuda.play(); // Toca o som de pedir ajuda
-        } else if (data.precisaAjuda && data.monitorIndo) {
-          setStatus("Monitor a caminho");
-          somMonitorCaminho.play(); // Toca o som de monitor a caminho
-        } else if (!data.precisaAjuda && !data.monitorIndo && status === "Monitor a caminho") {
-          setStatus("Problema resolvido");
-          setTimeout(() => setStatus(""), 3000); // Remove a mensagem após 3 segundos
-        }
-      } else {
-        setError("Turma não encontrada.");
-        setLoading(false);
-      }
-    });
-
-    // Atualiza o nome do professor ao carregar o painel
-    if (auth.currentUser) {
-      atualizarNomeProfessor(auth.currentUser.email);
+    if (!turmaId) {
+      setError("ID da turma não fornecido.");
+      setLoading(false);
+      return;
     }
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar o componente
+    const turmaRef = doc(db, "turmas", turmaId);
+
+    getDoc(turmaRef).then((docSnap) => {
+      if (!docSnap.exists()) {
+        setError("Turma não encontrada.");
+        setLoading(false);
+        return;
+      }
+
+      const unsubscribe = onSnapshot(turmaRef, (turmaSnap) => {
+        if (turmaSnap.exists()) {
+          const data = turmaSnap.data();
+          setTurma(data);
+          setLoading(false);
+
+          if (data.precisaAjuda && !data.monitorIndo) {
+            setStatus("Monitor acionado");
+            somPedirAjuda.play();
+          } else if (data.precisaAjuda && data.monitorIndo) {
+            setStatus("Monitor a caminho");
+            somMonitorCaminho.play();
+          } else if (!data.precisaAjuda && !data.monitorIndo && status === "Monitor a caminho") {
+            setStatus("Problema resolvido");
+            setTimeout(() => setStatus(""), 3000);
+          }
+        } else {
+          setError("Turma não encontrada.");
+          setLoading(false);
+        }
+      });
+
+      return () => unsubscribe();
+    });
   }, [turmaId, db, status]);
 
-  // Atualiza o campo `aulaAtiva` no Firestore para iniciar a aula
   const iniciarAula = async () => {
     try {
       const turmaRef = doc(db, "turmas", turmaId);
@@ -81,19 +85,21 @@ function ProfessorDashboard() {
     }
   };
 
-  // Atualiza o campo `aulaAtiva` no Firestore para encerrar a aula
   const encerrarAula = async () => {
     try {
       const turmaRef = doc(db, "turmas", turmaId);
-      await updateDoc(turmaRef, { aulaAtiva: false });
+      await updateDoc(turmaRef, {
+        aulaAtiva: false,
+        professorAtivo: null,
+      });
       console.log("Aula encerrada com sucesso!");
+      navigate("/professor-turmas");
     } catch (error) {
       console.error("Erro ao encerrar aula:", error);
       setError("Erro ao encerrar aula.");
     }
   };
 
-  // Atualiza o campo `precisaAjuda` no Firestore
   const pedirAjuda = async () => {
     try {
       const turmaRef = doc(db, "turmas", turmaId);
@@ -105,11 +111,15 @@ function ProfessorDashboard() {
     }
   };
 
-  // Função para sair (logout)
   const handleLogout = async () => {
     try {
+      const turmaRef = doc(db, "turmas", turmaId);
+      await updateDoc(turmaRef, {
+        professorAtivo: null,
+      });
       await signOut(auth);
       console.log("Professor deslogado com sucesso.");
+      navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
@@ -133,21 +143,18 @@ function ProfessorDashboard() {
         <div>
           <h2>Professor: {turma.professor}</h2>
 
-          {/* Botão para iniciar ou encerrar a aula */}
           {turma.aulaAtiva ? (
             <button onClick={encerrarAula}>Encerrar Aula</button>
           ) : (
             <button onClick={iniciarAula}>Iniciar Aula</button>
           )}
 
-          {/* Botão para pedir ajuda (só aparece se a aula estiver ativa) */}
           {turma.aulaAtiva && (
             <button onClick={pedirAjuda} disabled={turma.precisaAjuda}>
               {turma.precisaAjuda ? "Ajuda Solicitada" : "Pedir Ajuda"}
             </button>
           )}
 
-          {/* Exibe a mensagem de status */}
           {status && <p>{status}</p>}
         </div>
       )}

@@ -10,17 +10,15 @@ function AdminDashboard() {
   const db = getFirestore();
   const navigate = useNavigate();
 
-  // Estados para o formulário de criação de usuário
+
   const [nome, setNome] = useState("");
-  const [role, setRole] = useState("monitor"); // Valor padrão para o role
+  const [role, setRole] = useState("monitor");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Estados para a lista de usuários
   const [usuarios, setUsuarios] = useState([]);
 
-  // Carrega a lista de usuários do Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "usuarios "), (snapshot) => {
       const usuariosList = snapshot.docs.map((doc) => ({
@@ -30,10 +28,9 @@ function AdminDashboard() {
       setUsuarios(usuariosList);
     });
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar o componente
+    return () => unsubscribe();
   }, [db]);
 
-  // Verifica se o usuário logado é admin
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       try {
@@ -49,31 +46,29 @@ function AdminDashboard() {
           }
         } else {
           setIsAdmin(false);
-          navigate("/login"); // Redireciona para a página de login
+          navigate("/login");
         }
       } catch (error) {
         console.error("Erro ao buscar dados do usuário:", error);
         setIsAdmin(false);
       } finally {
-        setLoading(false); // Finaliza o carregamento
+        setLoading(false);
       }
     });
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar o componente
+    return () => unsubscribe();
   }, [db, navigate]);
 
-  // Função para realizar o logout
   const handleLogout = async () => {
     try {
-      await signOut(auth); // Realiza o logout
+      await signOut(auth);
       console.log("Usuário deslogado com sucesso.");
-      navigate("/login"); // Redireciona para a página de login
+      navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
   };
 
-  // Função para criar um novo usuário
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError("");
@@ -84,10 +79,9 @@ function AdminDashboard() {
       return;
     }
 
-    const email = `${nome.toLowerCase().replace(/\s+/g, "")}@gmail.com`; // Gera o e-mail
+    const email = `${nome.toLowerCase().replace(/\s+/g, "")}@gmail.com`;
 
     try {
-      // Salva as credenciais do admin atual
       const adminUser = auth.currentUser;
       const adminEmail = adminUser.email;
       const adminPassword = prompt("Digite sua senha para confirmar a criação do usuário:");
@@ -97,27 +91,24 @@ function AdminDashboard() {
         return;
       }
 
-      // Cria o usuário no Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       console.log("✅ Usuário criado com sucesso:", user.uid);
 
-      // Salva os dados do usuário no Firestore
       const userRef = doc(db, "usuarios ", user.uid);
       await setDoc(userRef, {
         nome: nome,
         email: email,
-        role: role, // Salva o role selecionado
+        role: role,
       });
 
-      // Restaura a sessão do admin
       await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
 
       setSuccess("Usuário criado com sucesso!");
       setNome("");
       setPassword("");
-      setRole("monitor"); // Reseta o formulário
+      setRole("monitor");
     } catch (error) {
       console.error("Erro ao criar usuário:", error);
       if (error.code === "auth/network-request-failed") {
@@ -128,10 +119,8 @@ function AdminDashboard() {
     }
   };
 
-  // Função para excluir um usuário do Firestore
   const handleDeleteUser = async (userId) => {
     try {
-      // Exclui o usuário do Firestore
       await deleteDoc(doc(db, "usuarios ", userId));
       console.log("Usuário excluído do Firestore:", userId);
 
@@ -142,7 +131,6 @@ function AdminDashboard() {
     }
   };
 
-  // Função para editar um usuário
   const handleEditUser = async (userId, newRole) => {
     try {
       const userRef = doc(db, "usuarios ", userId);
@@ -156,7 +144,7 @@ function AdminDashboard() {
   };
 
   if (loading) {
-    return <p>Carregando...</p>; // Exibe um indicador de carregamento
+    return <p>Carregando...</p>;
   }
 
   if (!isAdmin) {
@@ -173,7 +161,6 @@ function AdminDashboard() {
       <h1>Painel de Administração</h1>
       <p>Bem-vindo ao painel de administração!</p>
 
-      {/* Formulário de criação de usuário */}
       <form onSubmit={handleCreateUser}>
         <h2>Criar Novo Usuário</h2>
         {error && <p style={{ color: "red" }}>{error}</p>}
@@ -211,7 +198,6 @@ function AdminDashboard() {
         <button type="submit">Criar Usuário</button>
       </form>
 
-      {/* Lista de usuários */}
       <h2>Usuários Cadastrados</h2>
       <ul>
         {usuarios.map((usuario) => (
