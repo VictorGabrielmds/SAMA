@@ -35,7 +35,7 @@ function Login({ onLogin = () => {} }) {
 
   return (
     <div style={{ maxWidth: "300px", margin: "0 auto", padding: "20px" }}>
-      <h2>Login</h2>
+      <h1>Login</h1>
       <form onSubmit={handleLogin}>
         <input
           type="text"
@@ -43,7 +43,7 @@ function Login({ onLogin = () => {} }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ width: "100%", marginBottom: "10px", padding: "8px" }}
+          
         />
         <input
           type="password"
@@ -51,16 +51,16 @@ function Login({ onLogin = () => {} }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ width: "100%", marginBottom: "10px", padding: "8px" }}
+          
         />
         <button
           type="submit"
           disabled={loading}
-          style={{ width: "100%", padding: "8px", backgroundColor: "#007bff", color: "#fff", border: "none" }}
+          
         >
           {loading ? "Carregando..." : "Entrar"}
         </button>
-        {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+        
       </form>
     </div>
   );

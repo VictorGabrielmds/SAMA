@@ -66,6 +66,7 @@ function MonitorDashboard() {
       aulaAtiva: false,
       precisaAjuda: false,
       monitorIndo: false,
+      professorAtivo: null
     });
   };
 
@@ -77,14 +78,16 @@ function MonitorDashboard() {
   return (
     <div>
       <h1>Painel de Monitoramento</h1>
-      <button onClick={handleLogout} style={{ position: "absolute", top: 10, right: 10 }}>
-        Sair
-      </button>
+      <div style={{display:"inline", position: "absolute", top: 10, right: 10 }}>
+        <button onClick={handleLogout}>
+          Sair
+        </button>
+      </div> 
       <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
         {turmas.map((turma) => (
           <div key={turma.id} style={{ border: "1px solid black", padding: "10px" }}>
             <h2>Turma {turma.id}</h2>
-            <h4>{turma.professor}</h4>
+            <p>{turma.professorAtivo}</p>
             <p>{turma.aulaAtiva ? "Aula Iniciada ✅" : "Aula Não Iniciada ❌"}</p>
 
             {turma.precisaAjuda && !turma.monitorIndo && (

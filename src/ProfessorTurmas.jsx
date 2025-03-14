@@ -11,7 +11,6 @@ function ProfessorTurmas() {
   const db = getFirestore();
   const navigate = useNavigate();
 
-  // Carrega a lista de turmas do Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "turmas"), (snapshot) => {
       const turmasList = snapshot.docs.map((doc) => ({
@@ -22,29 +21,25 @@ function ProfessorTurmas() {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Limpa o listener ao desmontar o componente
+    return () => unsubscribe();
   }, [db]);
-
-  // Função para entrar em uma turma
+ 
   const entrarNaTurma = async (turmaId) => {
     const turmaRef = doc(db, "turmas", turmaId);
 
     try {
-      // Verifica se a turma já tem um professor ativo
       const turmaSnap = await getDoc(turmaRef);
       if (turmaSnap.exists() && turmaSnap.data().professorAtivo) {
-        if (turmaSnap.data().professorAtivo !== auth.currentUser.email) {
+        if (turmaSnap.data().professorAtivo !== auth.currentUser.email.split("@")[0]) {
           setError("Já há um professor ativo nesta turma.");
           return;
         }
       }
 
-      // Registra o professor como ativo na turma
       await updateDoc(turmaRef, {
-        professorAtivo: auth.currentUser.email.split("@")[0], // Usa o e-mail do professor como identificador
+        professorAtivo: auth.currentUser.email.split("@")[0],
       });
 
-      // Redireciona para o painel da turma
       navigate(`/turma/${turmaId}`);
     } catch (error) {
       console.error("Erro ao entrar na turma:", error);
@@ -52,12 +47,11 @@ function ProfessorTurmas() {
     }
   };
 
-  // Função para sair (logout)
   const handleLogout = async () => {
     try {
       await signOut(auth);
       console.log("Professor deslogado com sucesso.");
-      navigate("/login"); // Redireciona para a página de login
+      navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
     }
@@ -74,9 +68,11 @@ function ProfessorTurmas() {
   return (
     <div>
       <h1>Painel do Professor</h1>
-      <button onClick={handleLogout} style={{ position: "absolute", top: 10, right: 10 }}>
-        Sair
-      </button>
+      <div style={{display:"inline", position: "absolute", top: 10, right: 10 }}>
+        <button className="logout" onClick={handleLogout}>
+          Sair
+        </button>
+      </div>  
 
       <h2>Turmas Disponíveis</h2>
       <ul>

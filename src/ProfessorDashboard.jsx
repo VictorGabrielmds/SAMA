@@ -4,6 +4,10 @@ import { getFirestore, doc, onSnapshot, updateDoc, getDoc } from "firebase/fires
 import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 
+import alertSound from "../public/sounds/monitor-caminho.mp3";
+import logoB from "../src/assets/img/logo-branca.png";
+import logo from "../src/assets/img/logo.png";
+
 function ProfessorDashboard() {
   const { turmaId } = useParams();
   const [turma, setTurma] = useState(null);
@@ -13,24 +17,17 @@ function ProfessorDashboard() {
   const db = getFirestore();
   const navigate = useNavigate();
 
-  // Efeitos sonoros
-  const somPedirAjuda = new Audio("/sounds/pedir-ajuda.mp3");
-  const somMonitorCaminho = new Audio("/sounds/monitor-caminho.mp3");
+
+  const somMonitorCaminho = new Audio(alertSound);
 
   const getNomeFromEmail = (email) => {
     return email.split("@")[0];
   };
 
-  const atualizarNomeProfessor = async (email) => {
-    const nome = getNomeFromEmail(email);
-    try {
-      const turmaRef = doc(db, "turmas", turmaId);
-      await updateDoc(turmaRef, { professor: nome });
-      console.log("Nome do professor atualizado:", nome);
-    } catch (error) {
-      console.error("Erro ao atualizar nome do professor:", error);
-    }
-  };
+  const capitalize = (str) => {
+    if (!str || typeof str !== "string") return ""; // Verifica se é uma string válida
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
 
   useEffect(() => {
     if (!turmaId) {
@@ -56,7 +53,7 @@ function ProfessorDashboard() {
 
           if (data.precisaAjuda && !data.monitorIndo) {
             setStatus("Monitor acionado");
-            somPedirAjuda.play();
+            // somPedirAjuda.play();
           } else if (data.precisaAjuda && data.monitorIndo) {
             setStatus("Monitor a caminho");
             somMonitorCaminho.play();
@@ -111,17 +108,15 @@ function ProfessorDashboard() {
     }
   };
 
+
   const handleLogout = async () => {
     try {
       const turmaRef = doc(db, "turmas", turmaId);
-      await updateDoc(turmaRef, {
-        professorAtivo: null,
-      });
+      await updateDoc(turmaRef, { professorAtivo: null });
       await signOut(auth);
-      console.log("Professor deslogado com sucesso.");
       navigate("/login");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Erro no logout:", error);
     }
   };
 
@@ -134,30 +129,68 @@ function ProfessorDashboard() {
   }
 
   return (
-    <div>
-      <h1>Painel do Professor - Turma {turmaId}</h1>
-      <button onClick={handleLogout} style={{ position: "absolute", top: 10, right: 10 }}>
-        Sair
-      </button>
-      {turma && (
+    <div style={{ height:"100vh", display: "flex", gap: "16px"}}>
+      <div className="header">
         <div>
-          <h2>Professor: {turma.professor}</h2>
-
-          {turma.aulaAtiva ? (
-            <button onClick={encerrarAula}>Encerrar Aula</button>
-          ) : (
-            <button onClick={iniciarAula}>Iniciar Aula</button>
-          )}
+          <img style={{ marginBottom:"24px"}} className="logo" src={logo} alt="" />
+          <p>Turma {turmaId}</p>
+          <p>Professor: {capitalize(turma.professorAtivo)}</p>
+        </div> 
+        <button className="logout" onClick={handleLogout}>
+            Sair
+        </button>
+      </div>
+      
+      <div className="dashboard">
+        <div className="dashboard-title">
+          <h1>Painel do Professor</h1>
+        </div>
+        
+        {turma && (
+        
+        <div className="dashboard-content" style={{ height:"100vh", textAlign:"center"}}>
 
           {turma.aulaAtiva && (
-            <button onClick={pedirAjuda} disabled={turma.precisaAjuda}>
-              {turma.precisaAjuda ? "Ajuda Solicitada" : "Pedir Ajuda"}
-            </button>
+            <div>
+              <div className="gradient-button-bg">  
+                <div class="button-wrapper">
+                  <button className="gradient-button" onClick={pedirAjuda} disabled={turma.precisaAjuda}>
+                    <span className="button-text">{turma.precisaAjuda ? "Ajuda Solicitada" : "Pedir Ajuda"}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="status-content">
+                <div class="alert-wrapper">
+                  <div className="gradient-alert" onClick={pedirAjuda} disabled={turma.precisaAjuda}> 
+                </div>
+              </div>
+              <p style={{ visibility: status ? "visible" : "hidden", ativo: status ? 'sim' : 'nao' }}>
+                {status ? status : "Monitor Acionado"}
+              </p>
+            </div>
+            </div>
           )}
+          
+          {turma.aulaAtiva ? (
+            <div className="encerrar-aula">
+              <button onClick={encerrarAula}>Encerrar Aula</button>
 
-          {status && <p>{status}</p>}
+            </div>  
+          ) : (
+            <ul>
+              <li>
+                <button onClick={iniciarAula}>Iniciar Aula</button>
+              </li>
+              <li>
+                <button onClick={encerrarAula}>Sair da Sala</button>
+              </li>
+            </ul>
+          )}
+          
         </div>
+        
       )}
+      </div> 
     </div>
   );
 }
